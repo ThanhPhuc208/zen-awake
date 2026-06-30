@@ -1,5 +1,5 @@
 -- (Creator = Thanh Phuc)
--- 💟 Thanh Phuc - Ultimate Overwrite Boombox V8 (Thuật Toán Kích Hoạt Xuyên Bảo Mật Map) 💟
+-- 💟 Thanh Phuc - Ultimate Custom Boombox 💟
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -9,33 +9,31 @@ local SoundService = game:GetService("SoundService")
 -- HỆ THỐNG ÂM THANH KÉP BASS ĐẬP ẤM
 local SoundGroup = Instance.new("SoundGroup", SoundService)
 SoundGroup.Name = "ThanhPhucAudioGroup"
-SoundGroup.Volume = 1.8
+SoundGroup.Volume = 2
 
 local EQ = Instance.new("EqualizerSoundEffect", SoundGroup)
-EQ.LowGain = 8.5
-EQ.MidGain = 0
-EQ.HighGain = -4
+EQ.LowGain = 9
+EQ.MidGain = 1
+EQ.HighGain = -3
 
-local Sound1 = Instance.new("Sound", LocalPlayer:WaitForChild("PlayerWorkspace", 5) or workspace)
-Sound1.Name = "Channel_Left"
+local Sound1 = Instance.new("Sound", workspace)
+Sound1.Name = "TP_Channel_Left"
 Sound1.Looped = true
 Sound1.SoundGroup = SoundGroup
 
-local Sound2 = Instance.new("Sound", Sound1.Parent)
-Sound2.Name = "Channel_Right"
-Sound2.Looped = true
-Sound2.SoundGroup = SoundGroup
-
 local BoomboxPart = nil
 local LedOutline = nil
+local TagGui = nil
 local NameLabel = nil
 local IsPlayingMusic = false
 local VisualConnection = nil
 
 local function DestroyOldBoombox()
     if VisualConnection then VisualConnection:Disconnect() VisualConnection = nil end
-    if BoomboxPart and BoomboxPart:IsA("Part") then pcall(function() BoomboxPart:Destroy() end) end
+    if BoomboxPart then pcall(function() BoomboxPart:Destroy() end) end
+    if TagGui then pcall(function() TagGui:Destroy() end) end
     BoomboxPart = nil
+    TagGui = nil
 end
 
 local function CreateCustomBoombox()
@@ -43,107 +41,89 @@ local function CreateCustomBoombox()
     
     local character = LocalPlayer.Character
     if not character then return end
+    local root = character:WaitForChild("HumanoidRootPart", 5)
+    if not root then return end
     
-    -- THUẬT TOÁN XUYÊN BẢO MẬT: Tìm một Phụ kiện (Handle) có sẵn trên người để "chiếm quyền" làm loa
-    local targetPart = nil
-    for _, child in pairs(character:GetChildren()) do
-        if child:IsA("Accessory") and child:FindFirstChild("Handle") then
-            targetPart = child.Handle
-            -- Biến hình phụ kiện này thành khối loa màu đen
-            targetPart.Color = Color3.fromRGB(10, 10, 10)
-            targetPart.Material = Enum.Material.SmoothPlastic
-            -- Xóa các lưới mesh cũ nếu có để nó biến thành khối vuông
-            local mesh = targetPart:FindFirstChildOfClass("SpecialMesh") or targetPart:FindFirstChildOfClass("Mesh")
-            if mesh then mesh:Destroy() end
-            break
-        end
-    end
+    -- 1. TẠO KHỐI LOA MÀU ĐEN ĐẶC CHUẨN XÁC
+    BoomboxPart = Instance.new("Part")
+    BoomboxPart.Name = "ThanhPhuc_BackBoombox"
+    BoomboxPart.Size = Vector3.new(2.4, 1.4, 0.8) 
+    BoomboxPart.Color = Color3.fromRGB(15, 15, 15) -- Màu đen đặc hoàn toàn
+    BoomboxPart.Material = Enum.Material.SmoothPlastic
+    BoomboxPart.CanCollide = false
+    BoomboxPart.Anchored = true
+    BoomboxPart.Parent = character
     
-    -- Nếu không có phụ kiện, bắt buộc phải dùng thuật toán tạo Part đính trực tiếp vào Camera Client
-    if not targetPart then
-        BoomboxPart = Instance.new("Part")
-        BoomboxPart.Name = "ThanhPhucClientLoa"
-        BoomboxPart.Size = Vector3.new(2.4, 2.4, 1.6)
-        BoomboxPart.Color = Color3.fromRGB(10, 10, 10)
-        BoomboxPart.Material = Enum.Material.SmoothPlastic
-        BoomboxPart.CanCollide = false
-        BoomboxPart.Anchored = true
-        BoomboxPart.Parent = workspace.CurrentCamera -- Ép hiển thị trực tiếp lên Camera của bạn!
-        targetPart = BoomboxPart
-    end
-    
-    -- 2. Viền LED Cầu Vồng Đậm (Đồng bộ màu Menu)
+    -- 2. Viền LED Cầu Vồng Bao Quanh Khối Đen
     LedOutline = Instance.new("SelectionBox")
-    LedOutline.Name = "Premium_Outline"
-    LedOutline.Adornee = targetPart
-    LedOutline.LineThickness = 0.08
+    LedOutline.Name = "Boombox_LED"
+    LedOutline.Adornee = BoomboxPart
+    LedOutline.LineThickness = 0.06
     LedOutline.SurfaceTransparency = 1
-    LedOutline.Parent = targetPart
+    LedOutline.Parent = BoomboxPart
     
-    -- 3. IN NHÃN HIỆU GỌN GÀNG KHÔNG RỜI CHỮ
-    local SurfaceGui = Instance.new("SurfaceGui")
-    SurfaceGui.Name = "BrandDisplay"
-    SurfaceGui.Face = Enum.NormalId.Back
-    SurfaceGui.CanvasSize = Vector2.new(500, 250)
-    SurfaceGui.AlwaysOnTop = true -- Bật cái này để chắc chắn bạn nhìn thấy chữ xuyên qua mọi thứ
-    SurfaceGui.Parent = targetPart
-    
-    local CenterFrame = Instance.new("Frame")
-    CenterFrame.Size = UDim2.new(0.85, 0, 0.6, 0)
-    CenterFrame.Position = UDim2.new(0.075, 0, 0.2, 0)
-    CenterFrame.BackgroundTransparency = 1
-    CenterFrame.Parent = SurfaceGui
+    -- 3. BẢNG TÊN TRÊN ĐỈNH LOA (Không sợ bị khối đen lấp mất chữ)
+    TagGui = Instance.new("BillboardGui")
+    TagGui.Name = "ThanhPhucTextTag"
+    TagGui.Adornee = BoomboxPart
+    TagGui.Size = UDim2.new(0, 200, 0, 50)
+    TagGui.StudsOffset = Vector3.new(0, 1.1, 0) -- Đẩy chữ lên phía trên đỉnh loa hẳn để lộ rõ chữ
+    TagGui.AlwaysOnTop = true -- Xuyên thấu giúp chữ luôn hiện trên cùng
+    TagGui.Parent = BoomboxPart
     
     NameLabel = Instance.new("TextLabel")
     NameLabel.Size = UDim2.new(1, 0, 1, 0)
     NameLabel.BackgroundTransparency = 1
     NameLabel.Text = "Thanh Phuc"
-    NameLabel.Font = Enum.Font.SourceSansBold
+    NameLabel.Font = Enum.Font.GothamBold
     NameLabel.TextScaled = true
     NameLabel.TextColor3 = Color3.new(1, 1, 1)
-    NameLabel.Parent = CenterFrame
+    
+    -- Tạo bóng mờ cho chữ dễ đọc hơn trên nền sáng
+    local UIStrokeText = Instance.new("UIStroke", NameLabel)
+    UIStrokeText.Thickness = 1.5
+    UIStrokeText.Color = Color3.fromRGB(0, 0, 0)
+    
+    NameLabel.Parent = TagGui
 
-    -- VÒNG LẶP ĐỒNG BỘ HIỆU ỨNG CẦU VỒNG ĐẬP BASS
+    -- VÒNG LẶP ĐỒNG BỘ ĐẬP THEO PHÁT ÂM THANH REALTIME
     local hue = 0
-    local baseSize = Vector3.new(2.4, 2.4, 1.6)
-    local clock = 0
+    local baseSize = Vector3.new(2.4, 1.4, 0.8)
     
     VisualConnection = RunService.RenderStepped:Connect(function()
-        local char = LocalPlayer.Character
-        local root = char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso"))
-        
-        if not root then return end
-        
-        -- Nếu là Part tự tạo, khóa vị trí sau lưng liên tục
-        if BoomboxPart and BoomboxPart.Parent then
-            BoomboxPart.CFrame = root.CFrame * CFrame.new(0, 0.4, 1.1)
+        if not character or not character:Parent() or not root:Parent() then 
+            DestroyOldBoombox()
+            return 
         end
         
-        clock = clock + 1
-        local intensity = math.abs(math.sin(clock * 0.22)) * 0.4 + (math.cos(clock * 0.08) * 0.2)
-        intensity = math.clamp(intensity, 0, 0.9)
+        -- Cập nhật vị trí loa khóa chắc chắn ở sau lưng
+        BoomboxPart.CFrame = root.CFrame * CFrame.new(0, 0.4, 0.7)
         
-        -- MÀU CẦU VỒNG ĐẬM (Tone bảo hòa cao như Menu)
-        hue = (hue + 0.7) % 360
-        local darkRainbowColor = Color3.fromHSV(hue / 360, 1, 0.6) 
+        -- Nhịp điệu đập dựa trên PlaybackLoudness thực tế
+        local loudness = Sound1.PlaybackLoudness
+        local intensity = math.clamp(loudness / 280, 0, 1) 
         
-        LedOutline.Color3 = darkRainbowColor
-        NameLabel.TextColor3 = darkRainbowColor
+        -- Chạy hiệu ứng màu cầu vồng chớp sáng lung linh cho cả Viền và Chữ
+        hue = (hue + 1.2) % 360
+        local rainbowColor = Color3.fromHSV(hue / 360, 0.9, 0.6 + (intensity * 0.4)) 
         
-        -- Hiệu ứng co giãn kích thước loa
-        if BoomboxPart then
-            BoomboxPart.Size = baseSize * (1 + (intensity * 0.06))
-        else
-            targetPart.Size = baseSize * (1 + (intensity * 0.06))
-        end
+        LedOutline.Color3 = rainbowColor
+        NameLabel.TextColor3 = rainbowColor
+        
+        -- Khối loa đen co giãn nảy mạnh vừa phải theo nhịp bass
+        local scaleFactor = 1 + (intensity * 0.1) 
+        BoomboxPart.Size = baseSize * scaleFactor
     end)
 end
 
 Players.LocalPlayer.CharacterAdded:Connect(function()
-    if IsPlayingMusic then task.wait(0.6) CreateCustomBoombox() end
+    if IsPlayingMusic then 
+        task.wait(0.8) 
+        CreateCustomBoombox() 
+    end
 end)
 
--- GIAO DIỆN ĐỒNG BỘ STYLE MENU 
+-- GIAO DIỆN STYLE MENU ĐỒNG BỘ
 local ScreenGui = Instance.new("ScreenGui", PlayerGui)
 ScreenGui.ResetOnSpawn = false
 
@@ -192,9 +172,9 @@ OpenBtn.MouseButton1Click:Connect(function() MainFrame.Visible = true end)
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(0.8, 0, 0, 30)
 Title.Position = UDim2.new(0.05, 0, 0.05, 0)
-Title.Text = "🎵 THANH PHÚC HOÀN HẢO V8"
+Title.Text = "🎵 THANH PHÚC"
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 15
+Title.TextSize = 16
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.BackgroundTransparency = 1
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -222,9 +202,7 @@ PlayBtn.MouseButton1Click:Connect(function()
     if cleanID then
         local assetURI = "rbxassetid://" .. cleanID
         Sound1.SoundId = assetURI
-        Sound2.SoundId = assetURI
         Sound1:Play()
-        Sound2:Play()
         IsPlayingMusic = true
         CreateCustomBoombox()
     else
